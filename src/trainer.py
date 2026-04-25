@@ -1,4 +1,5 @@
 import csv
+import os
 import numpy as np
 import pickle
 from sklearn.neural_network import MLPClassifier
@@ -6,17 +7,25 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.preprocessing import StandardScaler
 
-DATA_PATH = "../data/landmarks.csv"
+DATA_PATHS = [
+    "../data/dataset_landmarks.csv",  # processed from image datasets
+    "../data/landmarks.csv",          # collected from webcam
+]
 MODEL_PATH = "../models/asl_model.pkl"
 
 
 def load_dataset():
     X, y = [], []
-    with open(DATA_PATH, newline='') as f:
-        for row in csv.reader(f):
-            if len(row) == 64:
-                y.append(row[0])
-                X.append([float(v) for v in row[1:]])
+    for path in DATA_PATHS:
+        if not os.path.exists(path):
+            print(f"  (skipping {path} — not found)")
+            continue
+        print(f"  loading {path}...")
+        with open(path, newline='') as f:
+            for row in csv.reader(f):
+                if len(row) == 64:
+                    y.append(row[0])
+                    X.append([float(v) for v in row[1:]])
     return np.array(X), np.array(y)
 
 
@@ -52,7 +61,13 @@ def train():
     print(classification_report(y_test, model.predict(X_test), target_names=labels))
 
     with open(MODEL_PATH, "wb") as f:
-        pickle.dump({"model": model, "scaler": scaler, "labels": labels}, f)
+        pickle.dump({
+            "model": model,
+            "scaler": scaler,
+            "labels": labels,
+            "X_test": X_test,
+            "y_test": y_test,
+        }, f)
     print(f"Model saved to {MODEL_PATH}")
 
 
