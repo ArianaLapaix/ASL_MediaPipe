@@ -86,8 +86,7 @@ with mp_hands.Hands(
         image = cv2.flip(image, 1)
 
         # Convert BGR -> RGB for MediaPipe
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)    
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         rgb_image.flags.writeable = False
 
         # Run Detection
@@ -116,7 +115,7 @@ with mp_hands.Hands(
                 landmark_data = normalize_to_wrist(raw_landmarks)
 
                 # Show landmark count on screen
-                cv2.putText(image, f"Landmarks: {len(landmark_data)}", (10, 30), 
+                cv2.putText(image, f"Landmarks: {len(landmark_data) // 3}", (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         else:
