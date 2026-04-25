@@ -1,0 +1,24 @@
+# Data — too large for GitHub and may have license restrictions
+data/ASL_Datasets/
+data/asl_dataset/
+data/dataset_landmarks.csv
+data/landmarks.csv
+data/features_cache.npz
+data/.process_checkpoint
+
+# Model weights
+models/asl_model.pkl
+
+# Generated plots
+plots/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env/
+venv/
+.venv/
+
+# macOS
+.DS_Store
