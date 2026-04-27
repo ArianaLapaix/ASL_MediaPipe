@@ -19,8 +19,8 @@ from sklearn.metrics import (
     precision_recall_fscore_support
 )
 
-MODEL_PATH  = "../models/asl_model.pkl"
-PLOTS_DIR   = "../plots"
+MODEL_PATH  = "models/asl_model.pkl"
+PLOTS_DIR   = "plots"
 
 os.makedirs(PLOTS_DIR, exist_ok=True)
 
@@ -31,15 +31,16 @@ with open(MODEL_PATH, "rb") as f:
 model  = saved["model"]
 scaler = saved["scaler"]
 labels = saved["labels"]
+le     = saved.get("le")
 
 if "X_test" in saved:
     X_test = saved["X_test"]
     y_test = saved["y_test"]
 else:
-    # Retrain split not saved — reload dataset and reproduce the same split
     import csv
     from sklearn.model_selection import train_test_split
-    DATA_PATHS = ["../data/dataset_landmarks.csv", "../data/landmarks.csv"]
+    from sklearn.preprocessing import LabelEncoder
+    DATA_PATHS = ["data/dataset_landmarks.csv", "data/landmarks.csv"]
     X_all, y_all = [], []
     for path in DATA_PATHS:
         if not os.path.exists(path):
@@ -51,19 +52,30 @@ else:
                     X_all.append([float(v) for v in row[1:]])
     X_all = np.array(X_all)
     y_all = np.array(y_all)
-    _, X_test, _, y_test = train_test_split(X_all, y_all, test_size=0.2, random_state=42, stratify=y_all)
+    _, X_test, _, y_test_str = train_test_split(X_all, y_all, test_size=0.2, random_state=42, stratify=y_all)
     X_test = scaler.transform(X_test)
+    y_test = le.transform(y_test_str) if le else y_test_str
     print("(Reproduced test split from dataset)")
 
 y_pred = model.predict(X_test)
 overall_acc = accuracy_score(y_test, y_pred)
 print(f"Overall test accuracy: {overall_acc * 100:.1f}%")
 
-display_labels = [l.upper() for l in labels]
+# Decode labels for display
+if le is not None:
+    display_labels = [l.upper() for l in le.classes_]
+    y_test_decoded = le.inverse_transform(y_test)
+    y_pred_decoded = le.inverse_transform(y_pred)
+    cm_labels = le.classes_
+else:
+    display_labels = [l.upper() for l in labels]
+    y_test_decoded = y_test
+    y_pred_decoded = y_pred
+    cm_labels = labels
 
 # ── 1. Confusion Matrix ───────────────────────────────────────────────────────
 print("Plotting confusion matrix...")
-cm = confusion_matrix(y_test, y_pred, labels=labels)
+cm = confusion_matrix(y_test_decoded, y_pred_decoded, labels=cm_labels)
 cm_pct = cm.astype(float) / cm.sum(axis=1, keepdims=True) * 100
 
 fig, ax = plt.subplots(figsize=(18, 15))
@@ -105,21 +117,46 @@ plt.tight_layout()
 plt.savefig(os.path.join(PLOTS_DIR, "per_class_accuracy.png"), dpi=150)
 plt.close()
 
-# ── 3. Training Loss Curve ────────────────────────────────────────────────────
-print("Plotting loss curve...")
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(model.loss_curve_, color="steelblue", linewidth=2)
-ax.set_xlabel("Iteration", fontsize=12)
-ax.set_ylabel("Loss", fontsize=12)
-ax.set_title("Training Loss Curve", fontsize=14)
-ax.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig(os.path.join(PLOTS_DIR, "loss_curve.png"), dpi=150)
-plt.close()
+# ── 3. Training Accuracy vs Validation Accuracy ──────────────────────────────
+print("Plotting accuracy curves...")
+if "train_accs" in saved and "val_accs" in saved:
+    fig, ax = plt.subplots(figsize=(10, 5))
+    iters = range(1, len(saved["train_accs"]) + 1)
+    ax.plot(iters, saved["train_accs"], color="steelblue",  linewidth=2, label="Training Accuracy")
+    ax.plot(iters, saved["val_accs"],   color="darkorange", linewidth=2, label="Validation Accuracy")
+    ax.set_xlabel("Iteration", fontsize=12)
+    ax.set_ylabel("Accuracy (%)", fontsize=12)
+    ax.set_title("Training vs Validation Accuracy", fontsize=14)
+    ax.yaxis.set_major_formatter(mticker.FormatStrFormatter("%.0f%%"))
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join(PLOTS_DIR, "accuracy_curve.png"), dpi=150)
+    plt.close()
+else:
+    print("  (accuracy curves not found — retrain with updated trainer.py)")
+
+# ── 4. Training Loss vs Validation Loss ──────────────────────────────────────
+print("Plotting loss curves...")
+if "train_losses" in saved and "val_losses" in saved:
+    fig, ax = plt.subplots(figsize=(10, 5))
+    iters = range(1, len(saved["train_losses"]) + 1)
+    ax.plot(iters, saved["train_losses"], color="steelblue",  linewidth=2, label="Training Loss")
+    ax.plot(iters, saved["val_losses"],   color="darkorange", linewidth=2, label="Validation Loss")
+    ax.set_xlabel("Iteration", fontsize=12)
+    ax.set_ylabel("Loss", fontsize=12)
+    ax.set_title("Training vs Validation Loss", fontsize=14)
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join(PLOTS_DIR, "loss_curve.png"), dpi=150)
+    plt.close()
+else:
+    print("  (loss curves not found — retrain with updated trainer.py)")
 
 # ── 4. Precision / Recall / F1 per class ─────────────────────────────────────
 print("Plotting precision / recall / F1...")
-precision, recall, f1, _ = precision_recall_fscore_support(y_test, y_pred, labels=labels)
+precision, recall, f1, _ = precision_recall_fscore_support(y_test_decoded, y_pred_decoded, labels=cm_labels)
 
 x = np.arange(len(labels))
 width = 0.28

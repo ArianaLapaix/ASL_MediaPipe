@@ -18,7 +18,10 @@ import os
 
 LABELS = list('abcdefghijklmnopqrstuvwxyz') + [str(i) for i in range(10)]
 SAMPLES_PER_CLASS = 100
-OUTPUT_PATH = "../data/landmarks.csv"
+OUTPUT_PATH = "data/landmarks.csv"
+
+# Ensure data directory exists
+os.makedirs("data", exist_ok=True)
 
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils

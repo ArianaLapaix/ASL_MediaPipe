@@ -4,9 +4,9 @@ import numpy as np
 import pickle
 import time
 
-MODEL_PATH = "../models/asl_model.pkl"
+MODEL_PATH = "models/asl_model.pkl"
 
-LETTER_CONFIRM_FRAMES = 20  # frames a letter must be held to register (~0.7s)
+LETTER_CONFIRM_FRAMES = 29  # frames a letter must be held to register (~0.7s)
 SPACE_AFTER_SECONDS = 1.5   # no hand this long → add a space
 IDLE_CLEAR_SECONDS = 5.0    # no hand this long → clear sentence
 
@@ -16,9 +16,9 @@ mp_drawing_styles = mp.solutions.drawing_styles
 
 with open(MODEL_PATH, "rb") as f:
     saved = pickle.load(f)
-model = saved["model"]
+model  = saved["model"]
 scaler = saved["scaler"]
-labels = saved["labels"]
+le     = saved.get("le")   # present after retraining with LabelEncoder
 
 
 def normalize_landmarks(raw):
@@ -82,8 +82,9 @@ with mp_hands.Hands(
                 )
                 raw = np.array([[lm.x, lm.y, lm.z] for lm in hand_landmarks.landmark]).flatten()
                 features = scaler.transform([normalize_landmarks(raw)])
-                pred_letter = model.predict(features)[0]
-                confidence = model.predict_proba(features).max()
+                pred_enc    = model.predict(features)[0]
+                pred_letter = le.inverse_transform([pred_enc])[0] if le else pred_enc
+                confidence  = model.predict_proba(features).max()
 
             # Count consecutive frames of the same letter
             if pred_letter == current_letter:
