@@ -1,3 +1,5 @@
+
+
 # ASL Fingerspelling Translator
 
 A real-time American Sign Language fingerspelling translator that uses MediaPipe to detect hand landmarks and an MLP classifier to translate signs into text. Point your webcam at your hand, fingerspell A–Z or 0–9, and watch the sentence build on screen.
@@ -11,6 +13,8 @@ A real-time American Sign Language fingerspelling translator that uses MediaPipe
 ## Demo
 
 > Point your webcam at your hand and fingerspell — the predicted letter appears at the bottom of the screen. Hold a sign for ~0.7s to confirm it. Remove your hand for 1.5s to add a space, or 5s to clear the sentence.
+
+<img width="1594" height="1492" alt="A" src="https://github.com/user-attachments/assets/5745845a-3365-4483-bfbb-2c2630a3ab66" />
 
 ## How It Works
 
